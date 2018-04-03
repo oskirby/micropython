@@ -82,6 +82,7 @@ static const flash_layout_t flash_layout[] = {
 
 // get the bank of a given flash address
 static uint32_t get_bank(uint32_t addr) {
+#if defined(FLASH_BANK_2)
     #if defined(STM32H7)
     if (READ_BIT(FLASH->OPTCR, FLASH_OPTCR_SWAP_BANK) == 0) {
     #else
@@ -101,6 +102,10 @@ static uint32_t get_bank(uint32_t addr) {
             return FLASH_BANK_1;
         }
     }
+#else
+    // single-bank part
+    return FLASH_BANK_1;
+#endif
 }
 
 #if defined(STM32L4)

@@ -103,7 +103,8 @@
       defined(STM32F746xx) || defined(STM32F767xx) || \
       defined(STM32F769xx) || defined(STM32F446xx)
 #define VBAT_DIV (4)
-#elif defined(STM32L475xx) || defined(STM32L476xx)
+#elif defined(STM32L462xx) || \
+      defined(STM32L475xx) || defined(STM32L476xx)
 #define VBAT_DIV (3)
 #else
 #error Unsupported processor
@@ -228,7 +229,8 @@ STATIC void adc_init_single(pyb_obj_adc_t *adc_obj) {
 
     HAL_ADC_Init(adcHandle);
 
-#if defined(STM32L4)
+#if defined(STM32L4) && 0
+#pragma message "TODO: FIXME for STM32L462 family!!!!"
     ADC_MultiModeTypeDef multimode;
     multimode.Mode = ADC_MODE_INDEPENDENT;
     if (HAL_ADCEx_MultiModeConfigChannel(adcHandle, &multimode) != HAL_OK)

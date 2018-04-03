@@ -39,6 +39,9 @@
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
+#if MICROPY_HW_USB_LEGACY
+PCD_HandleTypeDef pcd_usb_handle;
+#endif
 #if MICROPY_HW_USB_FS
 PCD_HandleTypeDef pcd_fs_handle;
 #endif
@@ -59,7 +62,54 @@ PCD_HandleTypeDef pcd_hs_handle;
 void HAL_PCD_MspInit(PCD_HandleTypeDef *hpcd)
 {
   GPIO_InitTypeDef  GPIO_InitStruct;
-  
+#if MICROPY_HW_USB_LEGACY
+  if (hpcd->Instance == USB)
+  {
+    /* Configure USB FS GPIOs */
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    GPIO_InitStruct.Pin = (GPIO_PIN_11 | GPIO_PIN_12);
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF10_USB_FS;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct); 
+
+	  /* Configure VBUS Pin */
+#if defined(MICROPY_HW_USB_VBUS_DETECT_PIN)
+    // USB VBUS detect pin is always A9
+    GPIO_InitStruct.Pin = GPIO_PIN_9;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+#endif
+
+    /* Enable USB FS Clocks */ 
+    __USB_CLK_ENABLE();
+
+#if defined(STM32L4)
+    /* Enable VDDUSB */
+    if(__HAL_RCC_PWR_IS_CLK_DISABLED())
+    {
+      __HAL_RCC_PWR_CLK_ENABLE();
+      HAL_PWREx_EnableVddUSB();
+      __HAL_RCC_PWR_CLK_DISABLE();
+    }
+    else
+    {
+      HAL_PWREx_EnableVddUSB();
+    }
+#endif
+
+    /* Set USBFS Interrupt priority */
+    HAL_NVIC_SetPriority(USB_IRQn, IRQ_PRI_OTG_FS, IRQ_SUBPRI_OTG_FS);
+    
+    /* Enable USBFS Interrupt */
+    HAL_NVIC_EnableIRQ(USB_IRQn);
+    return;
+  }
+#endif
+#if MICROPY_HW_USB_FS
   if(hpcd->Instance == USB_OTG_FS)
   {
     /* Configure USB FS GPIOs */
@@ -121,9 +171,11 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef *hpcd)
     
     /* Enable USBFS Interrupt */
     HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
-  } 
+    return;
+  }
+#endif
 #if MICROPY_HW_USB_HS
-  else if(hpcd->Instance == USB_OTG_HS)
+  if(hpcd->Instance == USB_OTG_HS)
   {
 #if MICROPY_HW_USB_HS_IN_FS
 
@@ -249,13 +301,23 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef *hpcd)
   */
 void HAL_PCD_MspDeInit(PCD_HandleTypeDef *hpcd)
 {
+#if MICROPY_HW_USB_LEGACY
+  if (hpcd->Instance == USB)
+  {
+    /* Disable USB FS Clocks */ 
+    __USB_CLK_DISABLE();
+    __SYSCFG_CLK_DISABLE(); 
+  }
+#endif
+#if MICROPY_HW_USB_FS
   if(hpcd->Instance == USB_OTG_FS)
   {  
     /* Disable USB FS Clocks */ 
     __USB_OTG_FS_CLK_DISABLE();
     __SYSCFG_CLK_DISABLE(); 
   }
-  #if MICROPY_HW_USB_HS
+#endif
+#if MICROPY_HW_USB_HS
   else if(hpcd->Instance == USB_OTG_HS)
   {  
     /* Disable USB FS Clocks */ 
@@ -418,9 +480,43 @@ void HAL_PCD_DisconnectCallback(PCD_HandleTypeDef *hpcd)
   * @retval USBD Status
   */
 USBD_StatusTypeDef  USBD_LL_Init (USBD_HandleTypeDef *pdev, int high_speed)
-{ 
+{
+#if MICROPY_HW_USB_LEGACY
+if (pdev->id == USB_PHY_LEGACY_ID)
+{
+  /*Set LL Driver parameters */
+  pcd_usb_handle.Instance = USB;
+  pcd_usb_handle.Init.dev_endpoints = 4;
+  pcd_usb_handle.Init.ep0_mps = 0x40;
+  pcd_usb_handle.Init.dma_enable = 0;
+  pcd_usb_handle.Init.low_power_enable = 0;
+  pcd_usb_handle.Init.phy_itface = PCD_PHY_EMBEDDED;
+  pcd_usb_handle.Init.Sof_enable = 1;
+  pcd_usb_handle.Init.speed = PCD_SPEED_FULL;
+#if defined(STM32L4)
+  pcd_usb_handle.Init.lpm_enable = DISABLE;
+  pcd_usb_handle.Init.battery_charging_enable = DISABLE;
+#endif
+
+  /* Link The driver to the stack */
+  pcd_usb_handle.pData = pdev;
+  pdev->pData = &pcd_usb_handle;
+  /*Initialize LL Driver */
+  HAL_PCD_Init(&pcd_usb_handle);
+
+  /* TODO: A bunch of HAL_PCDEx_PMAConfig setup??? */
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x00, PCD_SNG_BUF, 0x18);
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x80, PCD_SNG_BUF, 0x58);
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x01, PCD_SNG_BUF, 0xc0);
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x81, PCD_SNG_BUF, 0xc0);
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x02, PCD_SNG_BUF, 0x100);
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x82, PCD_SNG_BUF, 0x100);
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x03, PCD_SNG_BUF, 0x140);
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x83, PCD_SNG_BUF, 0x140);
+}
+#endif
 #if MICROPY_HW_USB_FS
-if (pdev->id ==  USB_PHY_FS_ID)
+if (pdev->id == USB_PHY_FS_ID)
 {
   /*Set LL Driver parameters */
   pcd_fs_handle.Instance = USB_OTG_FS;

@@ -339,6 +339,14 @@ void SysTick_Handler(void) {
   * @param  None
   * @retval None
   */
+#if MICROPY_HW_USB_LEGACY
+void USB_IRQHandler(void) {
+    IRQ_ENTER(USB_IRQn);
+    HAL_PCD_IRQHandler(&pcd_fs_handle);
+    IRQ_EXIT(USB_IRQn);
+}
+#endif
+
 #if MICROPY_HW_USB_FS
 void OTG_FS_IRQHandler(void) {
     IRQ_ENTER(OTG_FS_IRQn);
@@ -354,7 +362,7 @@ void OTG_HS_IRQHandler(void) {
 }
 #endif
 
-#if MICROPY_HW_USB_FS || MICROPY_HW_USB_HS
+#if MICROPY_HW_USB_LEGACY || MICROPY_HW_USB_FS || MICROPY_HW_USB_HS
 /**
   * @brief  This function handles USB OTG Common FS/HS Wakeup functions.
   * @param  *pcd_handle for FS or HS
@@ -394,9 +402,29 @@ STATIC void OTG_CMD_WKUP_Handler(PCD_HandleTypeDef *pcd_handle) {
     #endif
 
     /* ungate PHY clock */
+#if defined(__HAL_PCD_UNGATE_PHYCLOCK)
      __HAL_PCD_UNGATE_PHYCLOCK(pcd_handle);
+#endif
   }
 
+}
+#endif
+
+#if MICROPY_HW_USB_LEGACY
+/**
+  * @brief  This function handles USB FS Wakeup IRQ Handler.
+  * @param  None
+  * @retval None
+  */
+void USB_FS_WKUP_IRQHandler(void) {
+    IRQ_ENTER(USB_IRQn);
+
+  OTG_CMD_WKUP_Handler(&pcd_fs_handle);
+
+  /* Clear EXTI pending Bit*/
+  __HAL_USB_EXTI_CLEAR_FLAG();
+
+    IRQ_EXIT(USB_IRQn);
 }
 #endif
 

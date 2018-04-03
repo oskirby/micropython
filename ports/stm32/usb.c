@@ -46,7 +46,9 @@
 
 // Work out which USB device to use as the main one (the one with the REPL)
 #if !defined(MICROPY_HW_USB_MAIN_DEV)
-#if defined(MICROPY_HW_USB_FS)
+#if defined(MICROPY_HW_USB_LEGACY)
+#define MICROPY_HW_USB_MAIN_DEV (USB_PHY_LEGACY_ID)
+#elif defined(MICROPY_HW_USB_FS)
 #define MICROPY_HW_USB_MAIN_DEV (USB_PHY_FS_ID)
 #elif defined(MICROPY_HW_USB_HS) && defined(MICROPY_HW_USB_HS_IN_FS)
 #define MICROPY_HW_USB_MAIN_DEV (USB_PHY_HS_ID)

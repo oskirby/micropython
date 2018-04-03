@@ -1167,6 +1167,23 @@ uint8_t USBD_HID_SendReport(usbd_cdc_msc_hid_state_t *usbd, uint8_t *report, uin
     return USBD_OK;
 }
 
+#if MICROPY_HW_USB_LEGACY
+uint8_t USBD_HID_SetNAK(usbd_cdc_msc_hid_state_t *usbd) {
+    // get USBx object from pdev (needed for USBx_OUTEP macro below)
+    PCD_HandleTypeDef *hpcd = usbd->pdev->pData;
+    USB_TypeDef *USBx = hpcd->Instance;
+    PCD_SET_EP_RX_STATUS(USBx, HID_OUT_EP_WITH_CDC, USB_EP_RX_NAK);
+    return USBD_OK;
+}
+
+uint8_t USBD_HID_ClearNAK(usbd_cdc_msc_hid_state_t *usbd) {
+    // get USBx object from pdev (needed for USBx_OUTEP macro below)
+    PCD_HandleTypeDef *hpcd = usbd->pdev->pData;
+    USB_TypeDef *USBx = hpcd->Instance;
+    PCD_SET_EP_RX_STATUS(USBx, HID_OUT_EP_WITH_CDC, USB_EP_RX_VALID);
+    return USBD_OK;
+}
+#else
 uint8_t USBD_HID_SetNAK(usbd_cdc_msc_hid_state_t *usbd) {
     // get USBx object from pdev (needed for USBx_OUTEP macro below)
     PCD_HandleTypeDef *hpcd = usbd->pdev->pData;
@@ -1184,6 +1201,7 @@ uint8_t USBD_HID_ClearNAK(usbd_cdc_msc_hid_state_t *usbd) {
     USBx_OUTEP(HID_OUT_EP_WITH_CDC)->DOEPCTL |= USB_OTG_DOEPCTL_CNAK;
     return USBD_OK;
 }
+#endif
 
 // CDC/MSC/HID interface class callback structure
 const USBD_ClassTypeDef USBD_CDC_MSC_HID = {
