@@ -84,6 +84,7 @@
 #include "usb.h"
 
 extern void __fatal_error(const char*);
+extern PCD_HandleTypeDef pcd_usb_handle;
 extern PCD_HandleTypeDef pcd_fs_handle;
 extern PCD_HandleTypeDef pcd_hs_handle;
 
@@ -340,9 +341,9 @@ void SysTick_Handler(void) {
   * @retval None
   */
 #if MICROPY_HW_USB_LEGACY
-void USB_IRQHandler(void) {
+void OTG_FS_IRQHandler(void) {
     IRQ_ENTER(USB_IRQn);
-    HAL_PCD_IRQHandler(&pcd_fs_handle);
+    HAL_PCD_IRQHandler(&pcd_usb_handle);
     IRQ_EXIT(USB_IRQn);
 }
 #endif

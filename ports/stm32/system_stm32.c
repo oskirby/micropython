@@ -411,12 +411,14 @@ void SystemClock_Config(void)
     #endif
     RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
     #elif defined(STM32L4)
-    RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_LSE|RCC_OSCILLATORTYPE_MSI;
+    RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_LSE|RCC_OSCILLATORTYPE_MSI|RCC_OSCILLATORTYPE_HSI;
     RCC_OscInitStruct.LSEState = RCC_LSE_ON;
     RCC_OscInitStruct.MSIState = RCC_MSI_ON;
     RCC_OscInitStruct.MSICalibrationValue = RCC_MSICALIBRATION_DEFAULT;
-    RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
-    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_MSI;
+    RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_11; // RCC_MSIRANGE_6;
+    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI; // RCC_PLLSOURCE_MSI;
+    RCC_OscInitStruct.HSI48State = RCC_HSI48_ON; // enable HSI48
+    RCC_OscInitStruct.HSIState = RCC_HSI_ON;
     #endif
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
     /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2
@@ -566,27 +568,32 @@ void SystemClock_Config(void)
     HAL_RCCEx_EnableMSIPLLMode();
 
     RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
-    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_SAI1|RCC_PERIPHCLK_I2C1
-                                              |RCC_PERIPHCLK_USB |RCC_PERIPHCLK_ADC
-                                              |RCC_PERIPHCLK_RNG |RCC_PERIPHCLK_RTC;
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC |
+	                                           RCC_PERIPHCLK_I2C1 |
+	                                           RCC_PERIPHCLK_USB |
+	                                           RCC_PERIPHCLK_ADC |
+                                               RCC_PERIPHCLK_RNG;
+    ///RCC_PERIPHCLK_SAI1|RCC_PERIPHCLK_I2C1
+    //|RCC_PERIPHCLK_USB |RCC_PERIPHCLK_ADC
+    //|RCC_PERIPHCLK_RNG |RCC_PERIPHCLK_RTC;
     PeriphClkInitStruct.I2c1ClockSelection = RCC_I2C1CLKSOURCE_PCLK1;
     /* PLLSAI is used to clock USB, ADC, I2C1 and RNG. The frequency is
        HSE(8MHz)/PLLM(2)*PLLSAI1N(24)/PLLSAIQ(2) = 48MHz. See the STM32CubeMx
        application or the reference manual. */
-    PeriphClkInitStruct.Sai1ClockSelection = RCC_SAI1CLKSOURCE_PLLSAI1;
-    PeriphClkInitStruct.AdcClockSelection = RCC_ADCCLKSOURCE_PLLSAI1;
-    PeriphClkInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_PLLSAI1;
+    //PeriphClkInitStruct.Sai1ClockSelection = RCC_SAI1CLKSOURCE_PLLSAI1;
+    PeriphClkInitStruct.AdcClockSelection = RCC_ADCCLKSOURCE_SYSCLK;
+    PeriphClkInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_PLL;
     PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
-    PeriphClkInitStruct.RngClockSelection = RCC_RNGCLKSOURCE_PLLSAI1;
-    PeriphClkInitStruct.PLLSAI1.PLLSAI1Source = RCC_PLLSOURCE_MSI;
-    PeriphClkInitStruct.PLLSAI1.PLLSAI1M = 1;
-    PeriphClkInitStruct.PLLSAI1.PLLSAI1N = 24;
-    PeriphClkInitStruct.PLLSAI1.PLLSAI1P = RCC_PLLP_DIV7;
-    PeriphClkInitStruct.PLLSAI1.PLLSAI1Q = RCC_PLLQ_DIV2;
-    PeriphClkInitStruct.PLLSAI1.PLLSAI1R = RCC_PLLR_DIV2;
-    PeriphClkInitStruct.PLLSAI1.PLLSAI1ClockOut = RCC_PLLSAI1_SAI1CLK
-                                                 |RCC_PLLSAI1_48M2CLK
-                                                 |RCC_PLLSAI1_ADC1CLK;
+    PeriphClkInitStruct.RngClockSelection = RCC_RNGCLKSOURCE_PLL;
+    //PeriphClkInitStruct.PLLSAI1.PLLSAI1Source = RCC_PLLSOURCE_NONE;
+    //PeriphClkInitStruct.PLLSAI1.PLLSAI1M = 1;
+    //PeriphClkInitStruct.PLLSAI1.PLLSAI1N = 72;
+    //PeriphClkInitStruct.PLLSAI1.PLLSAI1P = RCC_PLLP_DIV7;
+    //PeriphClkInitStruct.PLLSAI1.PLLSAI1Q = RCC_PLLQ_DIV6;
+    //PeriphClkInitStruct.PLLSAI1.PLLSAI1R = RCC_PLLR_DIV6;
+    //PeriphClkInitStruct.PLLSAI1.PLLSAI1ClockOut = RCC_PLLSAI1_SAI1CLK
+    //                                             |RCC_PLLSAI1_48M2CLK
+    //                                             |RCC_PLLSAI1_ADC1CLK;
 
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
     {
