@@ -124,7 +124,8 @@ const uint8_t APBPrescTable[8] = {0, 0, 0, 0, 1, 2, 3, 4};
 #elif defined(STM32L4)
 
 #define CONFIG_RCC_CR_1ST (RCC_CR_MSION)
-#define CONFIG_RCC_CR_2ND (RCC_CR_HSEON | RCC_CR_CSSON | RCC_CR_HSION | RCC_CR_PLLON)
+// RCC_CR_HSEON | 
+#define CONFIG_RCC_CR_2ND (RCC_CR_CSSON | RCC_CR_HSION | RCC_CR_PLLON)
 #define CONFIG_RCC_PLLCFGR (0x00001000)
 /*
  * FIXME Do not know why I have to define these arrays here! they should be defined in the
@@ -567,12 +568,31 @@ void SystemClock_Config(void)
     // Enable MSI-Hardware auto calibration mode with LSE
     HAL_RCCEx_EnableMSIPLLMode();
 
+    // Enable clock recovery system
+    RCC_CRSInitTypeDef CRSInitStruct;
+    //CRSInitStruct.Prescaler       = RCC_CRS_SYNC_DIV1;
+    //CRSInitStruct.Source          = RCC_CRS_SYNC_SOURCE_USB;
+    //CRSInitStruct.Polarity        = RCC_CRS_SYNC_POLARITY_RISING;
+    //CRSInitStruct.ReloadValue     = RCC_CRS_RELOADVALUE_DEFAULT;
+    //CRSInitStruct.ErrorLimitValue = RCC_CRS_ERRORLIMIT_DEFAULT;
+    //CRSInitStruct.HSI48CalibrationValue = RCC_CRS_HSI48CALIBRATION_DEFAULT;
+
+    CRSInitStruct.Prescaler       = RCC_CRS_SYNC_DIV1;
+    CRSInitStruct.Source          = RCC_CRS_SYNC_SOURCE_LSE;
+    CRSInitStruct.Polarity        = RCC_CRS_SYNC_POLARITY_RISING;
+    CRSInitStruct.ReloadValue     = 1465; // 48MHz/32768Hz
+    CRSInitStruct.ErrorLimitValue = RCC_CRS_ERRORLIMIT_DEFAULT;
+    CRSInitStruct.HSI48CalibrationValue = RCC_CRS_HSI48CALIBRATION_DEFAULT;
+
+    HAL_RCCEx_CRSConfig(&CRSInitStruct);
+
+    // 
+    
     RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC |
 	                                           RCC_PERIPHCLK_I2C1 |
 	                                           RCC_PERIPHCLK_USB |
-	                                           RCC_PERIPHCLK_ADC |
-                                               RCC_PERIPHCLK_RNG;
+	                                           RCC_PERIPHCLK_ADC;
     ///RCC_PERIPHCLK_SAI1|RCC_PERIPHCLK_I2C1
     //|RCC_PERIPHCLK_USB |RCC_PERIPHCLK_ADC
     //|RCC_PERIPHCLK_RNG |RCC_PERIPHCLK_RTC;
@@ -582,9 +602,8 @@ void SystemClock_Config(void)
        application or the reference manual. */
     //PeriphClkInitStruct.Sai1ClockSelection = RCC_SAI1CLKSOURCE_PLLSAI1;
     PeriphClkInitStruct.AdcClockSelection = RCC_ADCCLKSOURCE_SYSCLK;
-    PeriphClkInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_PLL;
+    PeriphClkInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_MSI;
     PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
-    PeriphClkInitStruct.RngClockSelection = RCC_RNGCLKSOURCE_PLL;
     //PeriphClkInitStruct.PLLSAI1.PLLSAI1Source = RCC_PLLSOURCE_NONE;
     //PeriphClkInitStruct.PLLSAI1.PLLSAI1M = 1;
     //PeriphClkInitStruct.PLLSAI1.PLLSAI1N = 72;
