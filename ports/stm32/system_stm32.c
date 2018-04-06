@@ -402,6 +402,34 @@ void SystemClock_Config(void)
     }
     #endif
 
+#if defined(STM32L4)
+    RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_LSE|RCC_OSCILLATORTYPE_MSI|RCC_OSCILLATORTYPE_HSI;
+    RCC_OscInitStruct.LSEState            = RCC_LSE_ON;
+    RCC_OscInitStruct.MSIState            = RCC_MSI_ON;
+    RCC_OscInitStruct.MSICalibrationValue = RCC_MSICALIBRATION_DEFAULT;
+    RCC_OscInitStruct.MSIClockRange       = RCC_MSIRANGE_11; // RCC_MSIRANGE_6;
+
+    RCC_OscInitStruct.HSI48State          = RCC_HSI48_OFF; // enable HSI48
+    RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
+    RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT; // 116 = ChibiOS
+
+    RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_ON;
+    RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
+    RCC_OscInitStruct.PLL.PLLM            = 4;
+    RCC_OscInitStruct.PLL.PLLN            = 80;
+    RCC_OscInitStruct.PLL.PLLP            = 0;
+    RCC_OscInitStruct.PLL.PLLQ            = 6;
+    RCC_OscInitStruct.PLL.PLLR            = 4;
+    
+    RCC_ClkInitStruct.ClockType           = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+    RCC_ClkInitStruct.SYSCLKSource        = RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStruct.AHBCLKDivider       = RCC_SYSCLK_DIV1;
+    RCC_ClkInitStruct.APB1CLKDivider      = RCC_HCLK_DIV1;
+    RCC_ClkInitStruct.APB2CLKDivider      = RCC_HCLK_DIV1;
+
+
+    
+#else /* !STM32L462 */
     /* Enable HSE Oscillator and activate PLL with HSE as source */
     #if defined(STM32F4) || defined(STM32F7) || defined(STM32H7)
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
@@ -505,6 +533,8 @@ void SystemClock_Config(void)
     #endif
 #endif
 
+#endif /* STM32L462 */
+
     if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
       __fatal_error("HAL_RCC_OscConfig");
     }
@@ -569,23 +599,25 @@ void SystemClock_Config(void)
     HAL_RCCEx_EnableMSIPLLMode();
 
     // Enable clock recovery system
-    RCC_CRSInitTypeDef CRSInitStruct;
+    //__HAL_RCC_CRS_CLK_ENABLE();
+    //RCC_CRSInitTypeDef CRSInitStruct;
     //CRSInitStruct.Prescaler       = RCC_CRS_SYNC_DIV1;
     //CRSInitStruct.Source          = RCC_CRS_SYNC_SOURCE_USB;
     //CRSInitStruct.Polarity        = RCC_CRS_SYNC_POLARITY_RISING;
     //CRSInitStruct.ReloadValue     = RCC_CRS_RELOADVALUE_DEFAULT;
     //CRSInitStruct.ErrorLimitValue = RCC_CRS_ERRORLIMIT_DEFAULT;
     //CRSInitStruct.HSI48CalibrationValue = RCC_CRS_HSI48CALIBRATION_DEFAULT;
-
-    CRSInitStruct.Prescaler       = RCC_CRS_SYNC_DIV1;
-    CRSInitStruct.Source          = RCC_CRS_SYNC_SOURCE_LSE;
-    CRSInitStruct.Polarity        = RCC_CRS_SYNC_POLARITY_RISING;
-    CRSInitStruct.ReloadValue     = 1465; // 48MHz/32768Hz
-    CRSInitStruct.ErrorLimitValue = RCC_CRS_ERRORLIMIT_DEFAULT;
-    CRSInitStruct.HSI48CalibrationValue = RCC_CRS_HSI48CALIBRATION_DEFAULT;
-
-    HAL_RCCEx_CRSConfig(&CRSInitStruct);
-
+	//
+    //// for sync off 32khz
+    ////CRSInitStruct.Prescaler       = RCC_CRS_SYNC_DIV1;
+    ////CRSInitStruct.Source          = RCC_CRS_SYNC_SOURCE_LSE;
+    ////CRSInitStruct.Polarity        = RCC_CRS_SYNC_POLARITY_RISING;
+    ////CRSInitStruct.ReloadValue     = 1465; // 48MHz/32768Hz
+    ////CRSInitStruct.ErrorLimitValue = RCC_CRS_ERRORLIMIT_DEFAULT;
+    ////CRSInitStruct.HSI48CalibrationValue = RCC_CRS_HSI48CALIBRATION_DEFAULT;
+	//
+    //HAL_RCCEx_CRSConfig(&CRSInitStruct);
+    //__HAL_RCC_HSI48_ENABLE();
     // 
     
     RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
@@ -627,6 +659,23 @@ void SystemClock_Config(void)
 
     HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
 #endif
+
+#if 1
+    GPIOA->MODER = (GPIOA->MODER & ~(GPIO_MODER_MODE7)) | (2 << GPIO_MODER_MODE7_Pos);
+    GPIOA->OSPEEDR |= GPIO_OSPEEDR_OSPEED3;
+    GPIOA->AFR[0] = (GPIOA->AFR[0] & ~(GPIO_AFRL_AFSEL7)) | (2 << GPIO_AFRL_AFSEL7_Pos);
+    
+    RCC->APB1ENR1 |= RCC_APB1ENR1_TIM3EN;
+
+    TIM3->CCMR1 |= (6 << TIM_CCMR1_OC2M_Pos) | TIM_CCMR1_OC2PE;
+    TIM3->CCER |= TIM_CCER_CC2E;
+    TIM3->CCR2 = 5;
+    TIM3->ARR = 9;
+    TIM3->CR1 |= TIM_CR1_CEN;
+
+    
+#endif
+    
 }
 
 void HAL_MspInit(void) {

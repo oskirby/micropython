@@ -479,6 +479,11 @@ void HAL_PCD_DisconnectCallback(PCD_HandleTypeDef *hpcd)
   * @param  pdev: Device handle
   * @retval USBD Status
   */
+#define MSC_IN_EP     (0x81)
+#define MSC_OUT_EP    (0x01)
+#define CDC_IN_EP     (0x83)
+#define CDC_OUT_EP    (0x03)
+#define CDC_CMD_EP    (0x82)
 USBD_StatusTypeDef  USBD_LL_Init (USBD_HandleTypeDef *pdev, int high_speed)
 {
 #if MICROPY_HW_USB_LEGACY
@@ -505,14 +510,13 @@ if (pdev->id == USB_PHY_LEGACY_ID)
   HAL_PCD_Init(&pcd_usb_handle);
 
   /* TODO: A bunch of HAL_PCDEx_PMAConfig setup??? */
-  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x00, PCD_SNG_BUF, 0x18);
-  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x80, PCD_SNG_BUF, 0x58);
-  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x01, PCD_SNG_BUF, 0xc0);
-  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x81, PCD_SNG_BUF, 0xc0);
-  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x02, PCD_SNG_BUF, 0x100);
-  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x82, PCD_SNG_BUF, 0x100);
-  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x03, PCD_SNG_BUF, 0x140);
-  HAL_PCDEx_PMAConfig(&pcd_usb_handle, 0x83, PCD_SNG_BUF, 0x140);
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle,       0x00, PCD_SNG_BUF, 0x20);
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle,       0x80, PCD_SNG_BUF, 0x60);
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle,  MSC_IN_EP, PCD_SNG_BUF, 0x140);
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle, MSC_OUT_EP, PCD_SNG_BUF, 0x180);
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle, CDC_CMD_EP, PCD_SNG_BUF, 0xB0);
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle,  CDC_IN_EP, PCD_SNG_BUF, 0xC0);
+  HAL_PCDEx_PMAConfig(&pcd_usb_handle, CDC_OUT_EP, PCD_SNG_BUF, 0x100);
 }
 #endif
 #if MICROPY_HW_USB_FS
